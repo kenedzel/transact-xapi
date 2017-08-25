@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+    <spring:beans>
+        <context:property-placeholder location="classpath:config.properties" order="1" />
+    </spring:beans>
+    <http:listener-config name="api-httpListenerConfig" host="${config.host}" port="${config.port}" doc:name="HTTP Listener Configuration"/>
+    <apikit:config name="api-config" raml="api.raml" consoleEnabled="false" doc:name="Router"/>
+    <http:request-config name="TransactProcess" host="${config.papi.host}" port="${config.papi.port}" doc:name="HTTP Request Configuration" basePath="${config.papi.path}"/>
+    <flow name="api-main">
+        <http:listener config-ref="api-httpListenerConfig" path="${config.path}" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json"
+					mimeType="application/json" doc:name="Request as JSON" />
+        <apikit:router config-ref="api-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="Custom_Exception" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="api-console">
+        <http:listener config-ref="api-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="api-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="put:/transaction/{id}:api-config">
+        <http:request config-ref="TransactProcess" path="${config.papi.pv.id}" method="PUT" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+    </flow>
+    <flow name="delete:/transaction/{id}:api-config">
+        <http:request config-ref="TransactProcess" path="${config.papi.pv.id}" method="DELETE" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+    </flow>
+    <flow name="get:/transaction:api-config">
+        <http:request responseTimeout="9000" config-ref="TransactProcess" path="${config.papi.transaction}" method="GET" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+    </flow>
+    <flow name="get:/transaction/{id}:api-config">
+        <http:request config-ref="TransactProcess" path="${config.papi.pv.id}" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:uri-param paramName="id" value="#[message.inboundProperties['http.uri.params']['id']]"/>
+            </http:request-builder>
+        </http:request>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+    </flow>
+    <flow name="post:/transaction:api-config">
+        <http:request config-ref="TransactProcess" path="${config.papi.transaction}" method="POST" doc:name="HTTP"/>
+        <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+    </flow>
+    <apikit:mapping-exception-strategy name="api-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+    <choice-exception-strategy name="Custom_Exception">
+        <catch-exception-strategy when="#[message.inboundProperties.'http.status' == 404]" doc:name="404">
+            <copy-properties propertyName="*" doc:name="Property"/>
+            <set-payload value="{
+	&quot;code&quot;: &quot;404&quot;,
+	&quot;message&quot;: &quot;Not Found&quot;
+}" doc:name="Set Payload"/>
+        </catch-exception-strategy>
+         <catch-exception-strategy doc:name="500" when="#[message.inboundProperties.'http.status' == 500]">
+            <copy-properties propertyName="*" doc:name="Property"/>
+            <set-payload value="{  &quot;code&quot;: &quot;500&quot;,  &quot;message&quot;: &quot;Internal Server Error&quot; }" doc:name="Set Payload"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="Connection Timed Out 10s" when="exception.causedBy(java.util.concurrent.TimeoutException)">
+            <set-property propertyName="http.status" doc:name="Property" value="418"/>
+            <set-property propertyName="Content-Type" value="application/json" mimeType="application/json" doc:name="Property"/>
+            <set-payload value="{  &quot;code&quot;: &quot;418&quot;,  &quot;message&quot;: &quot;I'm a teapot. Connection Timed out&quot; }" doc:name="Set Payload"/>
+        </catch-exception-strategy>
+    </choice-exception-strategy>
+</mule>

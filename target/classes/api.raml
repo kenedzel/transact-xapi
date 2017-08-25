@@ -1,0 +1,94 @@
+#%RAML 0.8
+title: transaction-experience
+version: 1.0
+
+/transaction:
+  get:
+    description: List all transactions
+    body: 
+      application/json:
+    responses: 
+      200:
+        body: 
+          application/json:
+      204:
+        body: 
+          application/json:
+      500:
+        body: 
+          application/json:
+  post:
+    description: Save new transaction
+    body: 
+      application/json:
+        example: |
+          {
+            "id": 1,
+            "transactionName": "sample transact",
+            "referenceNumber": "1282BSD22",
+            "accountNumber": "1111123"
+          }
+    responses: 
+      201:
+        body: 
+          application/json:
+      500:
+        body: 
+          application/json:
+  /{id}:
+    get:
+      description: Find specific transaction via ID
+      body: 
+        application/json:
+      responses: 
+        200:
+          body: 
+            application/json:
+              example: |
+                  {
+                    "id": 1,
+                    "transactionName": "sample transact",
+                    "referenceNumber": "1282BSD22",
+                    "accountNumber": "1111123"
+                  }
+        404:
+          body: 
+            application/json:
+        500:
+          body: 
+            application/json:
+    delete:
+      description: Remove specific transaction
+      body: 
+        application/json:
+      responses: 
+        200:
+          body: 
+            application/json:
+        404:
+          body: 
+            application/json:
+        500:
+          body: 
+            application/json:
+    put:
+      description: Modify transaction
+      body: 
+        application/json:
+          example: |
+            {
+              "id": 1,
+              "transactionName": "sample transact",
+              "referenceNumber": "1282BSD22",
+              "accountNumber": "1111123"
+            }
+      responses: 
+        200:
+          body: 
+            application/json:
+        404:
+          body: 
+            application/json:
+        500:
+          body: 
+            application/json:
